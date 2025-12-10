@@ -1,0 +1,98 @@
+import sympy as sp
+import numpy as np
+import matplotlib.pyplot as plt
+import control
+
+def plotar_resposta_temporal(numerador, denominador, s_symbol=None, tempo_final=10):
+    """
+    Plota a Resposta ao Degrau (Step) e ao Impulso no domínio do tempo.
+    Aceita tanto entrada SIMBÓLICA (SymPy) quanto NUMÉRICA (Listas).
+    """
+    print("\n=== Plotagem no Domínio do Tempo ===")
+
+    # ---------------------------------------------------------
+    # 1. DETECÇÃO E CONVERSÃO (Simbólico -> Numérico)
+    # ---------------------------------------------------------
+    if s_symbol is not None:
+        # Se foi passado um símbolo 's', assume-se que num/den são equações
+        print("Modo: Simbólico detectado. Convertendo para numérico...")
+        
+        # Cria polinômios para extrair coeficientes ordenados
+        poly_num = sp.Poly(numerador, s_symbol)
+        poly_den = sp.Poly(denominador, s_symbol)
+        
+        # Extrai coeficientes (do maior grau para o menor)
+        num_vec = [float(c) for c in poly_num.all_coeffs()]
+        den_vec = [float(c) for c in poly_den.all_coeffs()]
+    else:
+        # Modo numérico direto (listas)
+        print("Modo: Numérico detectado.")
+        num_vec = numerador
+        den_vec = denominador
+
+    # ---------------------------------------------------------
+    # 2. CRIAÇÃO DO SISTEMA E SIMULAÇÃO
+    # ---------------------------------------------------------
+    # Cria a Transfer Function na biblioteca Control
+    sys = control.TransferFunction(num_vec, den_vec)
+    print(f"Sistema Gerado: {sys}")
+
+    # Define o vetor de tempo (opcional, o control faz auto, mas assim controlamos o fim)
+    t = np.linspace(0, tempo_final, 1000)
+
+    # Calcula Resposta ao Degrau (Step)
+    t_step, y_step = control.step_response(sys, T=t)
+
+    # Calcula Resposta ao Impulso
+    t_imp, y_imp = control.impulse_response(sys, T=t)
+
+    # ---------------------------------------------------------
+    # 3. PLOTAGEM GRÁFICA
+    # ---------------------------------------------------------
+    plt.figure(figsize=(10, 8))
+
+    # Subplot 1: Resposta ao Degrau
+    plt.subplot(2, 1, 1)
+    plt.plot(t_step, y_step, 'b-', linewidth=2)
+    plt.title('Resposta ao Degrau Unitário (Step Response)')
+    plt.ylabel('Amplitude')
+    plt.xlabel('Tempo (s)')
+    plt.grid(True)
+    
+    # Marca o valor final (Regime Permanente) se o sistema for estável
+    if len(y_step) > 0:
+        plt.axhline(y_step[-1], color='r', linestyle='--', alpha=0.6, label=f'Final: {y_step[-1]:.2f}')
+        plt.legend()
+
+    # Subplot 2: Resposta ao Impulso
+    plt.subplot(2, 1, 2)
+    plt.plot(t_imp, y_imp, 'g-', linewidth=2)
+    plt.title('Resposta ao Impulso (Impulse Response)')
+    plt.ylabel('Amplitude')
+    plt.xlabel('Tempo (s)')
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+# ==========================================
+# ÁREA DE USO NA PROVA
+# ==========================================
+if __name__ == "__main__":
+    
+    # --- CENÁRIO A: Você tem a equação com letras/símbolos ---
+    # Exemplo: H(s) = 10 / (s^2 + 2s + 10)
+    s = sp.symbols('s')
+    num_sym = 10
+    den_sym = s**2 + 2*s + 10
+    
+    # Chama passando o símbolo 's' para avisar que é simbólico
+    plotar_resposta_temporal(num_sym, den_sym, s_symbol=s, tempo_final=8)
+
+    # --- CENÁRIO B: Você tem apenas os números ---
+    # Exemplo: H(s) = (s + 1) / (s^3 + 5s^2 + 10s + 3)
+    num_list = [1, 1]          # s + 1
+    den_list = [1, 5, 10, 3]   # s^3 + ...
+    
+    # Chama SEM passar 's_symbol'
+    # plotar_resposta_temporal(num_list, den_list, tempo_final=15)
