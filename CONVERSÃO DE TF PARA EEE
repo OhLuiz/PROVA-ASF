@@ -1,0 +1,127 @@
+import sympy as sp
+import numpy as np
+import control
+
+# Configuração para imprimir bonito
+sp.init_printing(use_unicode=True)
+
+def tf_para_ss_simbolico(numerador, denominador, s):
+    """
+    Converte Função de Transferência SIMBÓLICA para Espaço de Estados.
+    Usa a Forma Canônica Controlável.
+    """
+    print("\n=== Conversão Simbólica (Forma Canônica Controlável) ===")
+    
+    # 1. Cria polinômios para extrair coeficientes
+    poly_num = sp.Poly(numerador, s)
+    poly_den = sp.Poly(denominador, s)
+    
+    # 2. Normalização (Garante que o coeficiente de maior ordem do denominador seja 1)
+    # Pega todos os coeficientes
+    coeffs_den = poly_den.all_coeffs()
+    coeffs_num = poly_num.all_coeffs()
+    
+    a0 = coeffs_den[0] # Coeficiente do termo de maior ordem (s^n)
+    
+    # Divide tudo por a0
+    coeffs_den = [c/a0 for c in coeffs_den]
+    coeffs_num = [c/a0 for c in coeffs_num]
+    
+    # Ordem do sistema (n)
+    n = len(coeffs_den) - 1
+    
+    # Padding: Preenche o numerador com zeros à esquerda se for menor que o denominador
+    diff = len(coeffs_den) - len(coeffs_num)
+    if diff > 0:
+        coeffs_num = [0]*diff + coeffs_num
+        
+    # 3. Construção da Matriz A
+    # Forma Canônica Controlável: Superdiagonal com 1s, última linha com coeffs invertidos
+    A = sp.zeros(n, n)
+    for i in range(n-1):
+        A[i, i+1] = 1
+        
+    # Última linha: [-an, -an-1, ..., -a1]
+    # coeffs_den = [1, a1, a2, ..., an]
+    # Precisamos pegar do a1 até o an, inverter a ordem e trocar o sinal
+    termos_den = coeffs_den[1:] # Remove o primeiro (que é 1)
+    for i in range(n):
+        A[n-1, i] = -termos_den[n-1-i]
+        
+    # 4. Construção da Matriz B
+    B = sp.zeros(n, 1)
+    B[n-1, 0] = 1
+    
+    # 5. Construção da Matriz D
+    # D é o primeiro coeficiente do numerador ajustado (b0)
+    b0 = coeffs_num[0]
+    D = sp.Matrix([b0])
+    
+    # 6. Construção da Matriz C
+    # Cj = bj - b0 * aj
+    C = sp.zeros(1, n)
+    # coeffs_num = [b0, b1, ..., bn]
+    # coeffs_den = [1, a1, ..., an]
+    for i in range(n):
+        # Índice correspondente nos vetores (lembrando que invertemos a ordem na matriz)
+        # Na forma controlável, C = [bn - b0*an, ..., b1 - b0*a1]
+        idx_coef = n - i # Vai do fim para o começo
+        val = coeffs_num[idx_coef] - b0 * coeffs_den[idx_coef]
+        C[0, i] = val
+        
+    print("Matriz A:")
+    sp.pprint(A)
+    print("\nMatriz B:")
+    sp.pprint(B)
+    print("\nMatriz C:")
+    sp.pprint(C)
+    print("\nMatriz D:")
+    sp.pprint(D)
+    
+    return A, B, C, D
+
+def tf_para_ss_numerico(num_list, den_list):
+    """
+    Converte TF Numérica usando a biblioteca Control.
+    Entrada: Listas de números. Ex: [1], [1, 2, 1]
+    """
+    print("\n=== Conversão Numérica (Biblioteca Control) ===")
+    
+    # Cria a Transfer Function
+    sys_tf = control.TransferFunction(num_list, den_list)
+    print(f"TF: {sys_tf}")
+    
+    # Converte para State Space
+    sys_ss = control.tf2ss(sys_tf)
+    
+    print("\nMatriz A:")
+    print(sys_ss.A)
+    print("\nMatriz B:")
+    print(sys_ss.B)
+    print("\nMatriz C:")
+    print(sys_ss.C)
+    print("\nMatriz D:")
+    print(sys_ss.D)
+    
+    return sys_ss
+
+# ==========================================
+# EXEMPLOS DE USO
+# ==========================================
+if __name__ == "__main__":
+    
+    # --- CASO 1: SIMBÓLICO (Para álgebra na prova) ---
+    # Exemplo: H(s) = K / (Ms^2 + Bs + Kp)
+    s, M, B, K, Kp = sp.symbols('s M B K Kp')
+    
+    # Defina numerador e denominador
+    num_sym = K
+    den_sym = M*s**2 + B*s + Kp
+    
+    tf_para_ss_simbolico(num_sym, den_sym, s)
+
+    # --- CASO 2: NUMÉRICO (Para simulação) ---
+    # Exemplo: H(s) = (2s + 1) / (s^2 + 4s + 3)
+    # Num: 2s + 1 -> [2, 1]
+    # Den: 1s^2 + 4s + 3 -> [1, 4, 3]
+    tf_para_ss_numerico([2, 1], [1, 4, 3])
