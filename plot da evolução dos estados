@@ -1,0 +1,96 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import control
+import sympy as sp
+
+def plotar_evolucao_estados(A, B, C, D, t_final=10, x0=None):
+    """
+    Simula e plota a evolução temporal dos estados x(t) para uma entrada DEGRAU.
+    Aceita matrizes numéricas (listas ou numpy).
+    """
+    print("\n=== Simulação de Estados ===")
+    
+    # 1. Garante que as matrizes sejam arrays numéricos do tipo float
+    # (Caso você tenha passado matrizes do SymPy, isso converte para números)
+    A = np.array(A).astype(float)
+    B = np.array(B).astype(float)
+    C = np.array(C).astype(float)
+    D = np.array(D).astype(float)
+    
+    # 2. Cria o sistema no pacote Control
+    sys = control.ss(A, B, C, D)
+    
+    # 3. Define o vetor de tempo e a entrada
+    # Cria 1000 pontos de 0 até t_final
+    t = np.linspace(0, t_final, 1000) 
+    u = np.ones_like(t) # Entrada Degrau Unitário (u=1)
+    
+    # Condição inicial (se não for passada, assume zero)
+    if x0 is None:
+        x0 = np.zeros(A.shape[0])
+    
+    # 4. Simulação (forced_response retorna tempo, saída e estados)
+    # Retorno: T, yout, xout
+    result = control.forced_response(sys, T=t, U=u, X0=x0)
+    
+    t_out = result.time
+    y_out = result.outputs
+    x_out = result.states # Aqui estão os estados!
+    
+    # 5. Plotagem dos Estados
+    plt.figure(figsize=(10, 6))
+    
+    # Plota cada estado (cada linha de x_out é um estado)
+    num_estados = x_out.shape[0]
+    for i in range(num_estados):
+        plt.plot(t_out, x_out[i, :], label=f'Estado $x_{i+1}(t)$', linewidth=2)
+        
+    plt.title('Evolução dos Estados $x(t)$ para Entrada Degrau')
+    plt.xlabel('Tempo (s)')
+    plt.ylabel('Amplitude')
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend()
+    plt.show()
+    
+    # Plota a Saída separadamente (opcional, mas útil)
+    plt.figure(figsize=(10, 4))
+    plt.plot(t_out, y_out, 'r', linewidth=2, label='Saída $y(t)$')
+    plt.title('Resposta de Saída $y(t)$')
+    plt.xlabel('Tempo (s)')
+    plt.ylabel('Amplitude')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+# ==========================================
+# COMO USAR NA PROVA
+# ==========================================
+if __name__ == "__main__":
+    
+    # Exemplo: Sistema Massa-Mola-Amortecedor
+    # x1 = posição, x2 = velocidade
+    # Matrizes numéricas
+    A_num = [[0, 1], [-2, -3]]   # Dinâmica
+    B_num = [[0], [1]]           # Entrada
+    C_num = [[1, 0]]             # Saída é a posição
+    D_num = [[0]]                # Sem acoplamento direto
+    
+    # Condição inicial: Posição 0, Velocidade 0
+    x_inicial = [0, 0] 
+    
+    # Chama a função (simula por 10 segundos)
+    plotar_evolucao_estados(A_num, B_num, C_num, D_num, t_final=10, x0=x_inicial)
+
+##posso fazer dessa forma
+# 1. Defina seus símbolos e matrizes simbólicas (como vimos antes)
+s, K, M = sp.symbols('s K M')
+A_sym = sp.Matrix([[0, 1], [-K/M, 0]]) # Exemplo simbólico
+
+# 2. Substitua os valores (Ex: K=10, M=2)
+# .subs retorna um novo objeto simbólico com números
+valores = {K: 10, M: 2}
+A_num = A_sym.subs(valores)
+
+# 3. Agora chame a função de plotar (ela converte pra float internamente)
+# (Faça o mesmo para B, C, D)
+# plotar_evolucao_estados(A_num, ...)
