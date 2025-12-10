@@ -1,0 +1,229 @@
+%% =================================================================
+% em caso de ter termos muito grandes, usar H_aprox
+% =================================================================
+
+%% 1. TRANSFORMADA DE LAPLACE E INVERSA (Simbólico)
+clc; clear; syms t s a w;
+
+% --- ÁREA DE EDIÇÃO ---
+% Defina sua função do tempo f(t) ou frequência F(s) aqui:
+f_t = exp(-2*t) * sin(t);      % Para ida (t -> s)
+F_s = 1 / (s^2 + 2*s + 5);     % Para volta (s -> t)
+% ----------------------
+
+disp('--- Transformada de Laplace (t -> s) ---');
+Laplace_Result = laplace(f_t, t, s);
+disp(Laplace_Result);
+H_apox = vpa(Laplace_Result,3);
+pretty(H_apox);
+
+disp('--- Laplace Inversa (s -> t) ---');
+Inversa_Result = ilaplace(F_s, s, t);
+disp(Inversa_Result);
+H_apox = vpa(Inversa_Result,3);
+pretty(H_apox)
+
+%% 2. OPERAÇÕES COM MATRIZES (Inversa, Det, Transposta, Autovalores)
+clc; clear; syms s k;
+
+% --- ÁREA DE EDIÇÃO ---
+% Aceita números e símbolos (s, k, etc)
+M = [s,     1; 
+     0,   s+2];
+% ----------------------
+
+disp('--- Matriz Original ---');
+pretty(M);
+
+disp('--- Determinante ---');
+D = det(M);
+pretty(D);
+
+disp('--- Transposta ---');
+T = M.'; % Note o ponto antes da aspa para transposta correta
+pretty(T);
+
+disp('--- Inversa ---');
+if D ~= 0
+    Inv = inv(M);
+    pretty(Inv);
+else
+    disp('Matriz Singular (Sem inversa)');
+end
+
+% Extra: Autovalores (Polos do sistema se M for a matriz A)
+disp('--- Autovalores (Eigenvalues) ---');
+Eig = eig(M);
+pretty(Eig);
+
+%% 3. POLOS E ZEROS (De Função de Transferência)
+clc; clear; syms s;
+
+% --- ÁREA DE EDIÇÃO ---
+% H(s) = Numerador / Denominador
+Num = s + 2;
+Den = s^2 + 3*s + 2;
+% ----------------------
+
+disp('--- Função de Transferência H(s) ---');
+H_s = Num / Den;
+pretty(H_s);
+
+disp('--- Zeros (Raízes do Numerador) ---');
+Zeros = solve(Num == 0, s);
+disp(Zeros);
+
+disp('--- Polos (Raízes do Denominador) ---');
+Polos = solve(Den == 0, s);
+disp(Polos);
+
+%% 4. CONVOLUÇÃO (Simbólica e Numérica)
+clc; clear; syms t tau;
+
+% --- ESCOLHA O TIPO DE OPERAÇÃO ---
+TIPO = 'SIMBOLICA'; % Mude para 'NUMERICA' se tiver vetores
+
+if strcmp(TIPO, 'SIMBOLICA')
+    % --- Edição Simbólica ---
+    f_t = exp(-t);
+    g_t = 1; % Degrau
+    
+    disp('--- Convolução Simbólica ---');
+    % Integral de convolução de 0 a t
+    % int(f(tau) * g(t - tau), tau, 0, t)
+    y_t = int(subs(f_t, t, tau) * subs(g_t, t, t - tau), tau, 0, t);
+    y_t = simplify(y_t);
+    pretty(y_t);
+    
+else
+    % --- Edição Numérica ---
+    dt = 0.1;
+    t_vec = 0:dt:10;
+    sinal_1 = ones(size(t_vec)); % Degrau
+    sinal_2 = exp(-t_vec);
+    
+    y = conv(sinal_1, sinal_2) * dt; % Importante multiplicar pelo dt
+    
+    % Plotagem
+    t_conv = 0:dt:(length(y)-1)*dt;
+    figure; plot(t_conv, y); title('Convolução Numérica'); grid on;
+end
+
+%% 5. FUNÇÃO DE TRANSFERÊNCIA -> ESPAÇO DE ESTADOS (Numérico)
+% Use este se você tiver NÚMEROS (ex: 1, 10, 5)
+clc; clear; close all;
+
+% --- ÁREA DE EDIÇÃO ---
+% H(s) = (2s + 1) / (s^2 + 4s + 3)
+num = [2 1];
+den = [1 4 3];
+% ----------------------
+
+disp('--- Conversão Numérica (tf2ss) ---');
+[A, B, C, D] = tf2ss(num, den);
+
+disp('Matriz A:'); disp(A);
+disp('Matriz B:'); disp(B);
+disp('Matriz C:'); disp(C);
+disp('Matriz D:'); disp(D);
+
+%% 6. FUNÇÃO DE TRANSFERÊNCIA -> ESPAÇO DE ESTADOS (Simbólico)
+% Use este se você tiver LETRAS (ex: K, M, B)
+% Implementa a Forma Canônica Controlável
+clc; clear; syms s K M B_amort;
+
+% --- ÁREA DE EDIÇÃO ---
+% Exemplo: Sistema Massa-Mola -> K / (Ms^2 + Bs + K)
+Num_Sym = K;
+Den_Sym = M*s^2 + B_amort*s + K;
+Var_S = s; % Variável de Laplace
+% ----------------------
+
+disp('--- Conversão Simbólica (Forma Canônica Controlável) ---');
+
+% Extrai os coeficientes (do maior grau para o menor)
+coeffs_den = coeffs(Den_Sym, Var_S, 'All');
+coeffs_num = coeffs(Num_Sym, Var_S, 'All');
+
+% Normaliza pelo primeiro termo do denominador (an)
+an = coeffs_den(1);
+coeffs_den = coeffs_den / an;
+coeffs_num = coeffs_num / an;
+
+n = length(coeffs_den) - 1; % Ordem do sistema
+
+% Preenche numerador com zeros à esquerda se necessário
+if length(coeffs_num) < length(coeffs_den)
+    coeffs_num = [zeros(1, length(coeffs_den)-length(coeffs_num)), coeffs_num];
+end
+
+% Montagem das Matrizes
+A = sym(zeros(n));
+% Superdiagonal de 1s
+for i = 1:n-1
+    A(i, i+1) = 1;
+end
+% Última linha (coeficientes invertidos e negativos)
+for i = 1:n
+    % coeffs_den = [1, a1, ..., an] -> Queremos [-an, ..., -a1]
+    A(n, i) = -coeffs_den(n - i + 2);
+end
+
+B = sym(zeros(n, 1));
+B(n) = 1;
+
+b0 = coeffs_num(1);
+D = b0;
+
+C = sym(zeros(1, n));
+for i = 1:n
+    % Cj = bj - b0*aj (na ordem correta da matriz)
+    % coeffs_num e den estão [b0, b1, ..., bn]
+    idx = n - i + 2; % Mapeia índice da matriz para índice do polinômio
+    C(i) = coeffs_num(idx) - b0*coeffs_den(idx);
+end
+
+disp('Matriz A:'); pretty(A);
+disp('Matriz B:'); pretty(B);
+disp('Matriz C:'); pretty(C);
+disp('Matriz D:'); pretty(D);
+
+%% 7. PLOTAR EVOLUÇÃO DOS ESTADOS x(t)
+% Plota a resposta de cada estado interno para uma entrada degrau
+clc; clear; close all;
+
+% --- ÁREA DE EDIÇÃO ---
+% Defina as matrizes numéricas aqui
+A = [0 1; -2 -3];
+B = [0; 1];
+C = [1 0];
+D = [0];
+
+x0 = [0; 0];      % Condições Iniciais
+t_final = 10;     % Tempo de simulação
+% ----------------------
+
+% Cria o sistema
+sys = ss(A, B, C, D);
+
+% Vetor de tempo e entrada
+t = 0:0.01:t_final;
+u = ones(size(t)); % Degrau Unitário
+
+% Simulação (lsim retorna y, t, x)
+[y, t_out, x] = lsim(sys, u, t, x0);
+
+% Plotagem
+figure('Name', 'Evolução dos Estados');
+plot(t_out, x, 'LineWidth', 2);
+grid on;
+title('Evolução dos Estados x(t)');
+xlabel('Tempo (s)');
+ylabel('Amplitude');
+
+% Legenda automática
+legend_labels = cell(1, size(x, 2));
+for k = 1:size(x, 2)
+    legend_labels{k} = sprintf('x_%d', k);
+end
+legend(legend_labels);
