@@ -1,0 +1,86 @@
+import sympy as sp
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Variáveis simbólicas globais
+t, tau = sp.symbols('t tau')
+
+def convolucao_simbolica(f_t, g_t):
+    """
+    Calcula a convolução y(t) = f(t) * g(t) simbolicamente.
+    """
+    print("\n=== Convolução Simbólica ===")
+    
+    # --- CORREÇÃO AQUI ---
+    # Converte as entradas para objetos SymPy (caso você passe números puros como 1, 5, etc)
+    f_t = sp.sympify(f_t)
+    g_t = sp.sympify(g_t)
+    # ---------------------
+
+    print(f"Sinal 1 f(t): {f_t}")
+    print(f"Sinal 2 g(t): {g_t}")
+    
+    # 1. Substituição de variáveis
+    f_tau = f_t.subs(t, tau)
+    g_t_minus_tau = g_t.subs(t, t - tau)
+    
+    # 2. Monta a integral
+    integrando = f_tau * g_t_minus_tau
+    
+    # 3. Calcula a integral (assumindo causalidade)
+    y_t = sp.integrate(integrando, (tau, 0, t))
+    y_t = sp.simplify(y_t)
+    
+    print("Resultado y(t):")
+    sp.pprint(y_t)
+    return y_t
+
+def convolucao_numerica(sinal1, sinal2, plotar=False):
+    """
+    Calcula a convolução discreta de dois vetores (listas de números).
+    Útil para sinais amostrados.
+    """
+    print("\n=== Convolução Numérica (Discreta) ===")
+    
+    # A função convolve do numpy faz o somatório deslizante
+    # mode='full' garante que o resultado tenha tamanho N + M - 1
+    y = np.convolve(sinal1, sinal2, mode='full')
+    
+    print(f"Tamanho Sinal 1: {len(sinal1)}")
+    print(f"Tamanho Sinal 2: {len(sinal2)}")
+    print(f"Tamanho Resultado: {len(y)}")
+    print(f"Resultado (primeiros 10 valores): {y[:10]}...")
+    
+    if plotar:
+        plt.figure(figsize=(10, 4))
+        plt.stem(y)
+        plt.title("Resultado da Convolução Discreta")
+        plt.xlabel("Amostras [n]")
+        plt.ylabel("Amplitude")
+        plt.grid(True)
+        plt.show()
+        
+    return y
+
+# ==========================================
+# EXEMPLOS DE USO
+# ==========================================
+if __name__ == "__main__":
+    
+    # --- CASO 1: SIMBÓLICO ---
+    # Exemplo clássico: Convolução de degrau u(t) com exponencial e^(-t)
+    # Resultado esperado: 1 - e^(-t) (resposta ao degrau de um sistema de 1ª ordem)
+    # Obs: sp.Heaviside(t) vale 1 para t>0.
+    # Na nossa função, já integramos de 0 a t, então podemos omitir o Heaviside 
+    # se a função for definida apenas para t>0 na sua cabeça, ou incluir para rigor.
+    f = sp.exp(-t)
+    g = 1 # Representando o degrau unitário na faixa de integração
+    
+    y_simb = convolucao_simbolica(f, g)
+    
+    # --- CASO 2: NUMÉRICO ---
+    # Exemplo: Dois pulsos quadrados
+    sinal_a = [1, 1, 1, 1, 1] # Pulso de largura 5
+    sinal_b = [1, 1, 1]       # Pulso de largura 3
+    
+    y_num = convolucao_numerica(sinal_a, sinal_b, plotar=True)
