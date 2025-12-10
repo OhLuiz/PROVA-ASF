@@ -1,0 +1,2 @@
+pip install sympy control matplotlib numpy scipy
+python -m pip install sympy control matplotlib numpy scipy
