@@ -1,2 +1,9 @@
 pip install sympy control matplotlib numpy scipy
 python -m pip install sympy control matplotlib numpy scipy
+
+import sys
+print("O Python que o VS Code está usando é:")
+print(sys.executable)
+
+
+& "C:\Users\SEU_USUARIO\...\python.exe" -m pip install sympy control matplotlib scipy numpy
