@@ -1,0 +1,125 @@
+#pip install sympy control
+import sympy as sp
+
+# Inicializa a "impressão bonita" para o terminal
+sp.init_printing(use_unicode=True)
+
+# Definição global de variáveis comuns
+s, t = sp.symbols('s t')
+
+def calcular_laplace(funcao_tempo):
+    """
+    Calcula a Transformada de Laplace de f(t) -> F(s)
+    Entrada: Expressão em função de 't' (ex: sp.exp(-2*t))
+    """
+    print("\n--- Transformada de Laplace ---")
+    print(f"Entrada f(t): {funcao_tempo}")
+    # O resultado vem como (Transformada, Plano Convergência, Condições)
+    # Pegamos apenas o primeiro elemento [0]
+    F_s = sp.laplace_transform(funcao_tempo, t, s, noconds=True)
+    print("Resultado F(s):")
+    sp.pprint(F_s)
+    return F_s
+
+def calcular_inversa_laplace(funcao_freq):
+    """
+    Calcula a Transformada Inversa de Laplace de F(s) -> f(t)
+    Entrada: Expressão em função de 's' (ex: 1/(s+2))
+    """
+    print("\n--- Laplace Inversa ---")
+    print(f"Entrada F(s): {funcao_freq}")
+    f_t = sp.inverse_laplace_transform(funcao_freq, s, t)
+    print("Resultado f(t):")
+    sp.pprint(f_t)
+    return f_t
+
+def inversa_matriz(lista_matriz):
+    M = sp.Matrix(lista_matriz)
+    print("\n=== Inversa de Matriz ===")
+    print("Matriz Original:")
+    sp.pprint(M)
+    det = M.det()
+    if det != 0:
+        inversa = M.inv()
+        print("\n> Inversa:")
+        sp.pprint(inversa)
+        return inversa
+    else:
+        print("\n> Inversa: Não existe (Determinante é zero)")
+        return None
+
+def determinante_matriz(lista_matriz):
+    M = sp.Matrix(lista_matriz)
+    print("\n=== Determinante da Matriz ===")
+    det = M.det()
+    sp.pprint(det)
+    return det
+
+
+def transposta_matriz(lista_matriz):
+    M = sp.Matrix(lista_matriz)
+    
+    print("\n=== Transposta de Matriz ===")
+    print("Matriz Original:")
+    sp.pprint(M)
+    
+    transposta = M.T
+    print("\n> Transposta:")
+    sp.pprint(transposta)
+    return transposta
+
+def polos_e_zeros(numerador, denominador):
+    """
+    Calcula os polos e zeros de uma função de transferência H(s) = Num/Den
+    Entrada: Expressões do numerador e denominador em função de 's'
+    """
+    print("\n=== Polos e Zeros ===")
+    H_s = numerador / denominador
+    print("Função de Transferência H(s):")
+    sp.pprint(H_s)
+    
+    # Zeros: Raízes do numerador
+    zeros = sp.solve(numerador, s)
+    print("\n> Zeros (Raízes do Numerador):")
+    sp.pprint(zeros)
+    
+    # Polos: Raízes do denominador
+    polos = sp.solve(denominador, s)
+    print("\n> Polos (Raízes do Denominador):")
+    sp.pprint(polos)
+    
+    return zeros, polos
+
+# ======================================================
+# ÁREA DE USO - MODIFIQUE AQUI DURANTE A PROVA
+# ======================================================
+
+if __name__ == "__main__":
+    # --- EXEMPLO 1: Laplace ---
+    # f(t) = e^(-2t) * sen(t)
+    f_t = sp.exp(-2*t) * sp.sin(t)
+    calcular_laplace(f_t)
+
+    # --- EXEMPLO 2: Inversa ---
+    # F(s) = 1 / (s^2 + 2s + 5)
+    F_s = 1 / (s**2 + 2*s + 5)
+    calcular_inversa_laplace(F_s)
+
+    # --- EXEMPLO 3: Matrizes ---
+    # Matriz A = [[s, 1], [0, s+2]]
+    # Note que funciona com símbolos 's' também!
+    minha_matriz = [
+        [s, 1],
+        [0, s+2]
+    ]
+   
+    determinante_matriz(minha_matriz)
+    inversa_matriz(minha_matriz)
+    transposta_matriz(minha_matriz)
+
+
+    # --- EXEMPLO 4: Polos e Zeros ---
+    # H(s) = (s + 2) / (s^2 + 3s + 2)
+    num = s + 2
+    den = s**2 + 3*s + 2
+    polos_e_zeros(num, den)
